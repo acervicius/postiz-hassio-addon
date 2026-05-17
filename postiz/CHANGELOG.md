@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.1
+
+- Fix v0.3.0 build failure: the temporalio/server:1.28.1 image does not
+  expose schemas under `/etc/temporal/schema`, so the Dockerfile's
+  `COPY --from=temporal-src /etc/temporal/schema ...` step erred with
+  `"/etc/temporal/schema": not found`. Pull the schemas from the
+  matching `temporalio/temporal` source tag tarball on GitHub instead
+  - they are pure SQL files and the version matches the
+  `temporal-server` binary we copy from the image. Build-time test
+  asserts both `postgresql/v12/temporal/versioned/` and
+  `postgresql/v12/visibility/versioned/` are present before the layer
+  finishes.
+
 ## 0.3.0
 
 Major architecture change. Temporal no longer runs in `start-dev` mode

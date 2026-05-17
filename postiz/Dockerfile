@@ -10,6 +10,7 @@ FROM ${BUILD_FROM}
 ARG BUILD_ARCH=amd64
 ARG BUILD_VERSION=0.1.0
 ARG TEMPORAL_CLI_VERSION=1.4.1
+ARG TEMPORAL_SERVER_VERSION=1.28.1
 ARG PG_MAJOR=17
 
 ENV LANG=C.UTF-8 \
@@ -52,7 +53,22 @@ RUN set -eux; \
 
 COPY --from=temporal-src /usr/local/bin/temporal-server /usr/local/bin/temporal-server
 COPY --from=temporal-src /usr/local/bin/temporal-sql-tool /usr/local/bin/temporal-sql-tool
-COPY --from=temporal-src /etc/temporal/schema /usr/share/temporal/schema
+
+# The schema directory's path inside temporalio/server is not stable across
+# versions (1.28.x dropped /etc/temporal/schema entirely). Pull schemas
+# straight from the matching source tag instead - they are pure SQL files
+# and the version matches the temporal-server binary we just copied.
+RUN set -eux; \
+    curl -fsSL "https://github.com/temporalio/temporal/archive/refs/tags/v${TEMPORAL_SERVER_VERSION}.tar.gz" \
+        -o /tmp/temporal-src.tgz; \
+    mkdir -p /usr/share/temporal; \
+    tar -xzf /tmp/temporal-src.tgz \
+        --strip-components=1 \
+        -C /usr/share/temporal \
+        "temporal-${TEMPORAL_SERVER_VERSION}/schema"; \
+    rm /tmp/temporal-src.tgz; \
+    test -d /usr/share/temporal/schema/postgresql/v12/temporal/versioned; \
+    test -d /usr/share/temporal/schema/postgresql/v12/visibility/versioned
 
 COPY --from=postiz-src /app /usr/share/postiz
 COPY --from=postiz-src /usr/local/bin/node /usr/local/bin/node
