@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.4
+
+- Mark the add-on as `stage: experimental`, so the Home Assistant
+  Add-on Store renders the matching badge. This is honest signalling
+  while v0.2.x still has known rough edges (Temporal under
+  SQLite tuning, no Ingress, single-container database lifecycle).
+  We will drop back to `stable` once Postgres-backed Temporal lands
+  in v0.3.0 and a real install has run for a week without issues.
+
 ## 0.2.3
 
 - Temporal's embedded SQLite was deadlocking under the burst of work

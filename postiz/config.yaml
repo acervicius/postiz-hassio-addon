@@ -1,6 +1,7 @@
 name: Postiz
-version: "0.2.3"
+version: "0.2.4"
 slug: postiz
+stage: experimental
 description: >-
   Self-hosted Postiz social media scheduler bundled with PostgreSQL,
   Redis, and Temporal. Unofficial community packaging.
