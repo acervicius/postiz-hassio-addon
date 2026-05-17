@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.5
+
+- Pin the upstream Postiz image from `:latest` to `:v2.21.6` in
+  `Dockerfile`. v2.21.7 (which `:latest` currently points to) ships
+  frontend chunks built with Turbopack that strip the `uuid`
+  library's defensive `try { i.name = e } catch {}` wrapper, causing
+  an uncaught `TypeError: Cannot assign to read only property 'name'`
+  at module evaluation time. The result is a permanent black page on
+  `/launches` after sign-up, with no React tree mount. v2.21.6 is the
+  previous patch, expected to share the same Prisma schema and not
+  require any data migration.
+- Pinning by tag rather than digest is deliberate: Postiz fixed a
+  related cache-bust issue in `:v2.21.6-amd64` after the multi-arch
+  manifest was published, but the multi-arch `v2.21.6` is the same
+  application code.
+
 ## 0.2.4
 
 - Mark the add-on as `stage: experimental`, so the Home Assistant

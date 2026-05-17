@@ -1,5 +1,5 @@
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base-debian:bookworm
-ARG POSTIZ_IMAGE=ghcr.io/gitroomhq/postiz-app:latest
+ARG POSTIZ_IMAGE=ghcr.io/gitroomhq/postiz-app:v2.21.6
 
 FROM ${POSTIZ_IMAGE} AS postiz-src
 
