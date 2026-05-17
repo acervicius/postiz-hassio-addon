@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.3.3
+
+- Step the upstream Postiz pin back further from `v2.21.6` to
+  **`v2.21.0`**. v2.21.6 ships the same `TypeError: Cannot assign to
+  read only property 'name'` in Turbopack-bundled frontend chunks
+  as v2.21.7 - the regression has been in every patch of v2.21.x
+  except `.0`. Confirmed by diffing the root `package.json` across
+  tags: v2.21.0 carries `next: 14.2.35`, v2.21.1 onwards bumped to
+  `next: 16.2.1` (and with it Turbopack as the default build
+  bundler).
+- v2.21.0 is the last Postiz release on Next.js 14; we lose ~6 patch
+  versions of features but gain a working frontend.
+- Database note: the Prisma schema in v2.21.0 may differ from v2.21.6
+  that may have already been pushed to `/data/postgres` on earlier
+  boots of this add-on. If the add-on fails to start with Prisma
+  schema errors, wipe `/data` per the v0.3.0 upgrade notes and let
+  v0.3.3 re-init fresh.
+
 ## 0.3.2
 
 - Fix v0.3.1 build failure: `temporalio/server:1.28.1` ships only the
