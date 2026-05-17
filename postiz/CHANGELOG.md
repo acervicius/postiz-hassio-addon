@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.2
+
+- `main_url` is now optional. If you leave it blank, the add-on asks the
+  Supervisor for HA's `internal_url` and the host port assigned to the
+  add-on's `5000/tcp`, builds a default like `http://<host>:<port>`,
+  and persists it to `/data/.main_url` so the same URL is reused on
+  every subsequent boot. Setting `main_url` explicitly still wins -
+  use it when you reach Postiz on an external domain, a non-default
+  HA hostname, or HTTPS.
+- The previous default `http://homeassistant.local:4007` was wrong for
+  anyone whose HA install uses a different hostname; the field now
+  starts empty.
+- `config.yaml`: enable `hassio_api: true` so the add-on can read
+  `/core/info`, `/host/info`, and `/addons/self/info` for the
+  auto-detect.
+- `jwt_secret` schema relaxed to optional (the v0.2.1 auto-generator
+  already handled the empty case but the schema still marked it
+  required, which would have made future option saves fail validation
+  with `jwt_secret` blank).
+
 ## 0.2.1
 
 - `jwt_secret` no longer has to be set manually. If the add-on option is

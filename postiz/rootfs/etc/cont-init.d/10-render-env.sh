@@ -9,11 +9,50 @@ write_env() {
 
 bashio::log.info "Rendering Postiz environment from add-on options"
 
-if ! bashio::config.has_value 'main_url'; then
-    bashio::exit.nok "Option 'main_url' is required. Set it to the URL you will reach Postiz at."
-fi
+# Auto-detect a sensible main_url from the Supervisor when the user leaves
+# the option blank, then persist the result under /data so this only runs
+# once per install. An explicit option always wins.
+detect_main_url() {
+    local internal_url host_port scheme_host hostname
+    local sup="http://supervisor"
+    local hdr="Authorization: Bearer ${SUPERVISOR_TOKEN:-}"
+
+    host_port=$(curl -fsS -m 5 -H "${hdr}" "${sup}/addons/self/info" 2>/dev/null \
+        | jq -r '.data.network["5000/tcp"] // empty' 2>/dev/null)
+    [ -z "${host_port}" ] && host_port=4007
+
+    internal_url=$(curl -fsS -m 5 -H "${hdr}" "${sup}/core/info" 2>/dev/null \
+        | jq -r '.data.internal_url // empty' 2>/dev/null)
+    if [ -n "${internal_url}" ]; then
+        scheme_host=$(printf '%s' "${internal_url}" \
+            | sed -E 's|^(https?://[^/:]+).*$|\1|')
+        printf '%s:%s' "${scheme_host}" "${host_port}"
+        return
+    fi
+
+    hostname=$(curl -fsS -m 5 -H "${hdr}" "${sup}/host/info" 2>/dev/null \
+        | jq -r '.data.hostname // empty' 2>/dev/null)
+    if [ -n "${hostname}" ]; then
+        printf 'http://%s.local:%s' "${hostname}" "${host_port}"
+        return
+    fi
+
+    printf 'http://homeassistant.local:%s' "${host_port}"
+}
 
 MAIN_URL=$(bashio::config 'main_url')
+MAIN_URL_FILE="/data/.main_url"
+if [ -z "${MAIN_URL}" ]; then
+    if [ -s "${MAIN_URL_FILE}" ]; then
+        MAIN_URL=$(cat "${MAIN_URL_FILE}")
+        bashio::log.info "Using persisted main_url from ${MAIN_URL_FILE}: ${MAIN_URL}"
+    else
+        MAIN_URL=$(detect_main_url)
+        printf '%s' "${MAIN_URL}" > "${MAIN_URL_FILE}"
+        bashio::log.info "Auto-detected main_url=${MAIN_URL} and persisted to ${MAIN_URL_FILE}"
+        bashio::log.info "Override by setting 'main_url' in the add-on options if you reach Postiz on a different hostname."
+    fi
+fi
 
 # jwt_secret can be left blank in the add-on options: we then generate a
 # 32-byte random value and persist it under /data so it survives add-on
