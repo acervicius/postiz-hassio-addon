@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.3
+
+- Temporal's embedded SQLite was deadlocking under the burst of work
+  Postiz's orchestrator throws at startup (14 workflow bundles + 14
+  worker registrations against one DB file). gRPC calls to
+  `DescribeNamespace` and `GetTimerTasks` were timing out at 30s, the
+  orchestrator was crash-looping with `Namespace default was not
+  found`, and the backend never finished its Temporal handshake -
+  which is why nginx kept getting `ECONNREFUSED` on `/api/*`.
+- Pass SQLite tuning pragmas to `temporal server start-dev`:
+  `journal_mode=WAL`, `synchronous=NORMAL`, `temp_store=MEMORY`,
+  `cache_size=-65536`. WAL lets the four Temporal services
+  (frontend/history/matching/worker) read concurrently with writers
+  instead of serialising on a single lock; NORMAL drops the
+  per-transaction `fsync` while staying crash-safe; the in-memory
+  temp store and 64 MB page cache remove two more disk hits. Standard
+  SQLite-under-concurrent-load tuning.
+- If this is not enough on slower storage, v0.3.0 will switch
+  Temporal to a Postgres backend using the existing add-on Postgres,
+  per the architecture we originally discussed.
+
 ## 0.2.2
 
 - `main_url` is now optional. If you leave it blank, the add-on asks the

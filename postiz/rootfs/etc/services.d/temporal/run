@@ -4,11 +4,25 @@ mkdir -p /data/temporal
 # Temporal in start-dev mode bundles its own frontend/history/matching/worker
 # services and persists to a single SQLite file. Suitable for single-node
 # Postiz deployments; not a clustered configuration.
-bashio::log.info "Starting Temporal (start-dev, SQLite persistence at /data/temporal/temporal.db)"
+#
+# SQLite pragmas matter a lot here. The four Temporal services share one
+# database file and Postiz's orchestrator hits the namespace + task queues
+# in bursts at startup (one worker per social platform). With the default
+# rollback journal + synchronous=FULL, the writer lock serialises every
+# call and gRPC starts timing out at 30s. WAL lets readers proceed during
+# writes, synchronous=NORMAL drops the per-transaction fsync (still
+# durable across crashes), temp_store=MEMORY skips disk for transient
+# query state, and a 64 MB cache covers the entire fresh DB.
+bashio::log.info "Starting Temporal (start-dev, SQLite at /data/temporal/temporal.db, WAL+NORMAL)"
 exec /usr/local/bin/temporal server start-dev \
     --ip 127.0.0.1 \
     --port 7233 \
     --headless \
     --db-filename /data/temporal/temporal.db \
+    --sqlite-pragma journal_mode=WAL \
+    --sqlite-pragma synchronous=NORMAL \
+    --sqlite-pragma temp_store=MEMORY \
+    --sqlite-pragma cache_size=-65536 \
     --namespace default \
     --log-level warn
+
