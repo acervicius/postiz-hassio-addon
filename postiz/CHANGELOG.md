@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.2
+
+- Fix v0.3.1 build failure: `temporalio/server:1.28.1` ships only the
+  `temporal-server` binary; `temporal-sql-tool` is not in that image.
+  Switch the build stage to `temporalio/auto-setup:1.28.1`, which is
+  what Postiz upstream uses in their own docker-compose and bundles
+  both binaries plus the setup helpers. Schemas continue to be
+  pulled from the source tag tarball.
+
 ## 0.3.1
 
 - Fix v0.3.0 build failure: the temporalio/server:1.28.1 image does not
