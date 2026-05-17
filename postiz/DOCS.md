@@ -107,3 +107,25 @@ PostgreSQL (`5432`), Redis (`6379`), and Temporal (`7233`) are bound
 to `127.0.0.1` inside the container and are not reachable from
 outside. This is intentional: it avoids any conflict with separate
 Home Assistant PostgreSQL or Redis add-ons running on the same host.
+
+## Opening the web UI
+
+The add-on detail page in Home Assistant shows an **OPEN WEB UI**
+button (driven by the `webui` field in the add-on manifest). Clicking
+it opens Postiz on whatever host port `5000/tcp` is mapped to.
+
+If you want Postiz in the HA sidebar, add a `panel_iframe` entry to
+your `configuration.yaml`:
+
+    panel_iframe:
+      postiz:
+        title: Postiz
+        icon: mdi:calendar-clock
+        url: "http://homeassistant.local:4007"
+        require_admin: true
+
+This is the HA-standard way to frame an external page in the sidebar.
+A native add-on sidebar entry (`panel_icon` / `panel_title` in the
+manifest) requires Home Assistant Ingress, which is not yet available
+for this add-on - see the "Known limitations" section in the
+repository README for why.

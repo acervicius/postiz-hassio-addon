@@ -71,11 +71,38 @@ target and is therefore not exposed by this add-on.
 
 See `postiz/DOCS.md` for the full option reference.
 
-## Known limitations (v0.1)
+## Adding Postiz to the Home Assistant sidebar (optional)
+
+The add-on detail page has an **OPEN WEB UI** button that opens Postiz
+in a new tab. If you would rather have a Postiz icon directly in the
+HA sidebar, add an `panel_iframe` entry to your `configuration.yaml`:
+
+    panel_iframe:
+      postiz:
+        title: Postiz
+        icon: mdi:calendar-clock
+        url: "http://homeassistant.local:4007"
+        require_admin: true
+
+Restart HA to pick up the change. Replace the URL with whatever you set
+as `main_url` in the add-on options.
+
+This is HA's standard "frame an external page" mechanism; it is not
+Home Assistant Ingress. See the limitations section below for why true
+Ingress is not available yet.
+
+## Known limitations
 
 - **No Home Assistant Ingress.** Postiz is reached on the host port you
-  map to the container's `5000/tcp`. Ingress requires Postiz to run
-  behind a path prefix and is deferred to a later release.
+  map to the container's `5000/tcp`. True Ingress (with HA-proxied
+  auth and SSL) requires Postiz's Next.js frontend to support a
+  configurable `basePath` so it can run behind a path prefix; upstream
+  does not currently support that and the assets are hardcoded to
+  absolute paths at build time. Tracked at
+  https://github.com/gitroomhq/postiz-app/issues (search for
+  `basePath`). The add-on will adopt Ingress as soon as upstream
+  exposes a `NEXT_PUBLIC_BASE_PATH` (or equivalent) build-time
+  option.
 - **Single container.** PostgreSQL, Redis, Temporal, and Postiz all run
   inside one container under s6-overlay. This is intentional for v0.1
   to keep installation to a single click.
