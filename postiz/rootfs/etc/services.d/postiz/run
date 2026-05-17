@@ -11,10 +11,23 @@ until redis-cli -h 127.0.0.1 -p 6379 ping 2>/dev/null | grep -q PONG; do
     sleep 1
 done
 
-bashio::log.info "Postiz: waiting for Temporal"
+bashio::log.info "Postiz: waiting for Temporal frontend"
 until /usr/local/bin/temporal operator cluster health --address 127.0.0.1:7233 >/dev/null 2>&1; do
     sleep 2
 done
+
+# The production temporal-server (unlike temporal CLI's start-dev) does not
+# auto-create the default namespace. Postiz refuses to start workflows
+# against a missing namespace, so we register it on every boot if absent.
+# 'namespace describe' returns non-zero when not found, in which case we
+# create with a 7-day retention (Temporal's recommended minimum for SQL
+# persistence).
+if ! /usr/local/bin/temporal operator namespace describe \
+        --namespace default --address 127.0.0.1:7233 >/dev/null 2>&1; then
+    bashio::log.info "Postiz: registering Temporal namespace 'default'"
+    /usr/local/bin/temporal operator namespace create \
+        --namespace default --address 127.0.0.1:7233 --retention 7d || true
+fi
 
 bashio::log.info "Postiz: starting nginx and pm2 (mirrors upstream CMD)"
 # nginx forks into the background; pm2 stays in the foreground (pm2-run ends

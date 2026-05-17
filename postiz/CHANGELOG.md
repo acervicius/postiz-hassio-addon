@@ -1,5 +1,61 @@
 # Changelog
 
+## 0.3.0
+
+Major architecture change. Temporal no longer runs in `start-dev` mode
+with SQLite persistence; it now uses the same PostgreSQL instance that
+already runs in the container, with dedicated `temporal` and
+`temporal_visibility` databases owned by a `temporal` role. The CLI's
+`server start-dev` was always going to bottleneck on SQLite under
+Postiz's worker-burst startup, even with the WAL tuning from 0.2.3.
+
+- `Dockerfile`: new build stage `FROM temporalio/server:1.28.1 AS
+  temporal-src`; the `temporal-server`, `temporal-sql-tool` binaries
+  and the canonical PostgreSQL v12 schemas are copied into the final
+  image. The `temporal` CLI we already had is kept for namespace ops.
+- `20-bootstrap-databases.sh`: creates the `temporal` role and both
+  Temporal databases on first boot (idempotent, alongside the
+  existing `postiz-user` / `postiz-db-local` creation), then runs
+  `temporal-sql-tool setup-schema` + `update-schema` against each. A
+  `/data/.temporal-schema-applied` marker file keeps re-runs no-op.
+- `services.d/temporal/run`: replaces the `temporal server start-dev
+  --db-filename ... --sqlite-pragma ...` invocation with
+  `temporal-server --root /etc/temporal --env production start
+  --service frontend --service history --service matching --service
+  worker`, configured via the new
+  `/etc/temporal/config/production.yaml`.
+- `services.d/postiz/run`: after Temporal frontend answers
+  `cluster health`, idempotently creates the `default` namespace
+  (7-day retention). The dev-mode auto-create from `start-dev` does
+  not happen with the production server, so Postiz would otherwise
+  fail to enqueue workflows.
+- `services.d/postgres/run`: tuning for consumer-grade storage.
+  `synchronous_commit=off` (last few seconds of writes may be lost
+  on hard power-loss, DB stays consistent), `checkpoint_timeout=15m`,
+  `max_wal_size=2GB`, `checkpoint_completion_target=0.9`,
+  `wal_buffers=16MB`, `shared_buffers=128MB`,
+  `effective_cache_size=512MB`. The 68-second checkpoint stalls
+  observed in v0.2.4 logs should drop to a few seconds, and Temporal
+  should not lose grpc calls to PG checkpoint contention.
+
+### Upgrade notes
+
+The bootstrap script is purely additive over an existing v0.2.x
+`/data/postgres` (new role + new databases are created next to the
+existing `postiz-db-local`), so no wipe is *required*. The old
+`/data/temporal/temporal.db` SQLite file from v0.2.x is no longer
+read by anything; it can be left in place or deleted to reclaim
+disk.
+
+If you have been hitting odd state from earlier v0.2.x boots (the
+in-progress account, partly-initialised tables, etc.) and want a
+clean slate, stop the add-on in HA, then via the SSH & Web Terminal
+add-on:
+
+    rm -rf /usr/share/hassio/addons/data/04a391a1_postiz/*
+
+Start the add-on again; first boot will re-run the full init.
+
 ## 0.2.5
 
 - Pin the upstream Postiz image from `:latest` to `:v2.21.6` in

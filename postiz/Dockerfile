@@ -1,7 +1,9 @@
 ARG BUILD_FROM=ghcr.io/home-assistant/amd64-base-debian:bookworm
 ARG POSTIZ_IMAGE=ghcr.io/gitroomhq/postiz-app:v2.21.6
+ARG TEMPORAL_SERVER_IMAGE=temporalio/server:1.28.1
 
 FROM ${POSTIZ_IMAGE} AS postiz-src
+FROM ${TEMPORAL_SERVER_IMAGE} AS temporal-src
 
 FROM ${BUILD_FROM}
 
@@ -47,6 +49,10 @@ RUN set -eux; \
     chmod +x /usr/local/bin/temporal; \
     rm /tmp/temporal.tgz; \
     /usr/local/bin/temporal --version
+
+COPY --from=temporal-src /usr/local/bin/temporal-server /usr/local/bin/temporal-server
+COPY --from=temporal-src /usr/local/bin/temporal-sql-tool /usr/local/bin/temporal-sql-tool
+COPY --from=temporal-src /etc/temporal/schema /usr/share/temporal/schema
 
 COPY --from=postiz-src /app /usr/share/postiz
 COPY --from=postiz-src /usr/local/bin/node /usr/local/bin/node

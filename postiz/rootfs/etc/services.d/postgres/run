@@ -7,9 +7,31 @@ SOCKET_DIR="/var/run/postgresql"
 mkdir -p "${SOCKET_DIR}"
 chown postgres:postgres "${SOCKET_DIR}"
 
-bashio::log.info "Starting PostgreSQL ${PG_MAJOR} (bound to 127.0.0.1)"
+# Tuning rationale for a single-user Postiz add-on on consumer-grade
+# storage (HA OS commonly runs on SD card / eMMC / cheap SATA):
+#   synchronous_commit=off      -> ack commits before WAL fsync; last few
+#                                  seconds of writes may be lost on hard
+#                                  power-loss, DB stays consistent.
+#   checkpoint_timeout=15min    -> spread checkpoint I/O over a longer
+#                                  window so it does not stall Temporal
+#                                  and Postiz writes for ~60s like the
+#                                  default 5min did on slow disks.
+#   max_wal_size=2GB            -> avoid forcing a checkpoint on every
+#                                  WAL roll for the same reason.
+#   checkpoint_completion_target=0.9 -> stretch the checkpoint write
+#                                       phase to ~90% of the interval,
+#                                       smoothing the I/O burst.
+bashio::log.info "Starting PostgreSQL ${PG_MAJOR} (bound to 127.0.0.1, tuned for single-node low-traffic)"
 exec s6-setuidgid postgres "${PGBIN}/postgres" \
     -D "${PGDATA}" \
     -c listen_addresses=127.0.0.1 \
     -c unix_socket_directories="${SOCKET_DIR}" \
-    -c logging_collector=off
+    -c logging_collector=off \
+    -c synchronous_commit=off \
+    -c checkpoint_timeout=15min \
+    -c max_wal_size=2GB \
+    -c checkpoint_completion_target=0.9 \
+    -c wal_buffers=16MB \
+    -c shared_buffers=128MB \
+    -c effective_cache_size=512MB \
+    -c max_connections=100
