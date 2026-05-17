@@ -1,0 +1,15 @@
+#!/usr/bin/with-contenv bashio
+PG_MAJOR=17
+PGBIN="/usr/lib/postgresql/${PG_MAJOR}/bin"
+PGDATA="/data/postgres"
+SOCKET_DIR="/var/run/postgresql"
+
+mkdir -p "${SOCKET_DIR}"
+chown postgres:postgres "${SOCKET_DIR}"
+
+bashio::log.info "Starting PostgreSQL ${PG_MAJOR} (bound to 127.0.0.1)"
+exec s6-setuidgid postgres "${PGBIN}/postgres" \
+    -D "${PGDATA}" \
+    -c listen_addresses=127.0.0.1 \
+    -c unix_socket_directories="${SOCKET_DIR}" \
+    -c logging_collector=off

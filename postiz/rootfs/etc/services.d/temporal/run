@@ -1,0 +1,14 @@
+#!/usr/bin/with-contenv bashio
+mkdir -p /data/temporal
+
+# Temporal in start-dev mode bundles its own frontend/history/matching/worker
+# services and persists to a single SQLite file. Suitable for single-node
+# Postiz deployments; not a clustered configuration.
+bashio::log.info "Starting Temporal (start-dev, SQLite persistence at /data/temporal/temporal.db)"
+exec /usr/local/bin/temporal server start-dev \
+    --ip 127.0.0.1 \
+    --port 7233 \
+    --headless \
+    --db-filename /data/temporal/temporal.db \
+    --namespace default \
+    --log-level warn

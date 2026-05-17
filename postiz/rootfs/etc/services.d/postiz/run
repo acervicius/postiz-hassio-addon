@@ -1,0 +1,23 @@
+#!/usr/bin/with-contenv bashio
+cd /usr/share/postiz
+
+bashio::log.info "Postiz: waiting for PostgreSQL"
+until pg_isready -h 127.0.0.1 -p 5432 -U postiz-user -d postiz-db-local >/dev/null 2>&1; do
+    sleep 1
+done
+
+bashio::log.info "Postiz: waiting for Redis"
+until redis-cli -h 127.0.0.1 -p 6379 ping 2>/dev/null | grep -q PONG; do
+    sleep 1
+done
+
+bashio::log.info "Postiz: waiting for Temporal"
+until /usr/local/bin/temporal operator cluster health --address 127.0.0.1:7233 >/dev/null 2>&1; do
+    sleep 2
+done
+
+bashio::log.info "Postiz: starting nginx and pm2 (mirrors upstream CMD)"
+# nginx forks into the background; pm2 stays in the foreground (pm2-run ends
+# in `pm2 logs` which blocks). This matches the upstream image's CMD exactly.
+nginx
+exec pnpm run pm2

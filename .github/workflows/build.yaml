@@ -1,0 +1,86 @@
+name: Build add-on images
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag to publish (e.g. 0.1.0)"
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, aarch64]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Resolve image tag
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Read add-on version
+        id: addon
+        run: |
+          v=$(grep -E '^version:' postiz/config.yaml | head -n1 | awk '{print $2}' | tr -d '"')
+          echo "version=${v}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        if: matrix.arch == 'aarch64'
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Map arch to Docker platform
+        id: platform
+        run: |
+          case "${{ matrix.arch }}" in
+            amd64)   echo "platform=linux/amd64"  >> "$GITHUB_OUTPUT" ;;
+            aarch64) echo "platform=linux/arm64"  >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Read base image for arch
+        id: base
+        run: |
+          b=$(grep -E "^\s+${{ matrix.arch }}:" postiz/build.yaml | awk '{print $2}' | tr -d '"')
+          echo "base=${b}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./postiz
+          file: ./postiz/Dockerfile
+          platforms: ${{ steps.platform.outputs.platform }}
+          push: true
+          provenance: false
+          build-args: |
+            BUILD_FROM=${{ steps.base.outputs.base }}
+            BUILD_ARCH=${{ matrix.arch }}
+            BUILD_VERSION=${{ steps.addon.outputs.version }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/postiz-hassio-addon-${{ matrix.arch }}:${{ steps.addon.outputs.version }}
+            ghcr.io/${{ github.repository_owner }}/postiz-hassio-addon-${{ matrix.arch }}:latest

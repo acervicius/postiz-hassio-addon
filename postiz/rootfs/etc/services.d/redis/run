@@ -1,0 +1,10 @@
+#!/usr/bin/with-contenv bashio
+bashio::log.info "Starting Redis (bound to 127.0.0.1)"
+exec s6-setuidgid redis /usr/bin/redis-server \
+    --dir /data/redis \
+    --bind 127.0.0.1 \
+    --port 6379 \
+    --save 60 1000 \
+    --appendonly no \
+    --protected-mode yes \
+    --loglevel notice

@@ -1,0 +1,75 @@
+name: Postiz
+version: "0.1.0"
+slug: postiz
+description: >-
+  Self-hosted Postiz social media scheduler bundled with PostgreSQL,
+  Redis, and Temporal. Unofficial community packaging.
+url: https://github.com/acervicius/postiz-hassio-addon
+arch:
+  - amd64
+  - aarch64
+startup: services
+boot: auto
+init: false
+hassio_role: default
+host_network: false
+host_pid: false
+host_ipc: false
+privileged: []
+ports:
+  "5000/tcp": 4007
+ports_description:
+  "5000/tcp": Postiz web UI
+options:
+  main_url: "http://homeassistant.local:4007"
+  jwt_secret: ""
+  log_level: info
+  storage_provider: local
+  disable_registration: false
+  cloudflare_account_id: ""
+  cloudflare_access_key: ""
+  cloudflare_secret_access_key: ""
+  cloudflare_bucket_name: ""
+  cloudflare_bucket_url: ""
+  cloudflare_region: auto
+  facebook_app_id: ""
+  facebook_app_secret: ""
+  threads_app_id: ""
+  threads_app_secret: ""
+  x_url: ""
+  x_api_key: ""
+  x_api_secret: ""
+  linkedin_client_id: ""
+  linkedin_client_secret: ""
+  youtube_client_id: ""
+  youtube_client_secret: ""
+  reddit_client_id: ""
+  reddit_client_secret: ""
+  openai_api_key: ""
+schema:
+  main_url: url
+  jwt_secret: password
+  log_level: list(debug|info|warn|error)
+  storage_provider: list(local|cloudflare)
+  disable_registration: bool
+  cloudflare_account_id: str?
+  cloudflare_access_key: str?
+  cloudflare_secret_access_key: password?
+  cloudflare_bucket_name: str?
+  cloudflare_bucket_url: str?
+  cloudflare_region: str?
+  facebook_app_id: str?
+  facebook_app_secret: password?
+  threads_app_id: str?
+  threads_app_secret: password?
+  x_url: str?
+  x_api_key: str?
+  x_api_secret: password?
+  linkedin_client_id: str?
+  linkedin_client_secret: password?
+  youtube_client_id: str?
+  youtube_client_secret: password?
+  reddit_client_id: str?
+  reddit_client_secret: password?
+  openai_api_key: password?
+image: ghcr.io/acervicius/postiz-hassio-addon-{arch}

@@ -1,0 +1,11 @@
+#!/usr/bin/with-contenv bashio
+# s6 sends SIGTERM to postgres; postgres treats SIGTERM as "smart shutdown"
+# which waits for clients. We want fast shutdown so the container can exit
+# promptly when HA stops the add-on.
+PG_MAJOR=17
+PGBIN="/usr/lib/postgresql/${PG_MAJOR}/bin"
+PGDATA="/data/postgres"
+
+if [ -f "${PGDATA}/postmaster.pid" ]; then
+    su -s /bin/sh postgres -c "${PGBIN}/pg_ctl -D ${PGDATA} -m fast -w -t 30 stop" || true
+fi
