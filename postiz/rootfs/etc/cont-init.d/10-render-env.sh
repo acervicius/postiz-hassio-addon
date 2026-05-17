@@ -12,12 +12,26 @@ bashio::log.info "Rendering Postiz environment from add-on options"
 if ! bashio::config.has_value 'main_url'; then
     bashio::exit.nok "Option 'main_url' is required. Set it to the URL you will reach Postiz at."
 fi
-if ! bashio::config.has_value 'jwt_secret'; then
-    bashio::exit.nok "Option 'jwt_secret' is required. Generate one with: openssl rand -hex 32"
-fi
 
 MAIN_URL=$(bashio::config 'main_url')
+
+# jwt_secret can be left blank in the add-on options: we then generate a
+# 32-byte random value and persist it under /data so it survives add-on
+# restarts and snapshots. Resetting it means wiping /data, which already
+# requires re-bootstrapping the Postgres cluster, so the secret rotation
+# happens at the right cadence.
 JWT_SECRET=$(bashio::config 'jwt_secret')
+JWT_FILE="/data/.jwt_secret"
+if [ -z "${JWT_SECRET}" ]; then
+    if [ -s "${JWT_FILE}" ]; then
+        JWT_SECRET=$(cat "${JWT_FILE}")
+        bashio::log.info "Using persisted jwt_secret from ${JWT_FILE}"
+    else
+        JWT_SECRET=$(openssl rand -hex 32)
+        (umask 077 && printf '%s' "${JWT_SECRET}" > "${JWT_FILE}")
+        bashio::log.info "Generated jwt_secret and persisted to ${JWT_FILE}"
+    fi
+fi
 
 write_env MAIN_URL              "$MAIN_URL"
 write_env FRONTEND_URL          "$MAIN_URL"
@@ -73,3 +87,9 @@ for entry in "${mappings[@]}"; do
 done
 
 bashio::log.info "Environment rendered: MAIN_URL=${MAIN_URL}, STORAGE_PROVIDER=${STORAGE_PROVIDER}"
+
+# Marker so 20-bootstrap-databases.sh can tell that config rendering
+# succeeded. s6-overlay's legacy cont-init runs every script regardless of
+# individual failures and only aggregates the result at the end, so without
+# this gate a missing main_url would still trigger initdb against /data.
+touch /run/postiz-config-validated

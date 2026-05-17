@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.1
+
+- `jwt_secret` no longer has to be set manually. If the add-on option is
+  left blank, the init script now generates a 32-byte random value
+  with `openssl rand -hex 32` and persists it to `/data/.jwt_secret`
+  (mode 0600). Subsequent boots reuse the saved value, so sessions
+  survive restarts. Setting `jwt_secret` explicitly in the add-on
+  options still wins.
+- `20-bootstrap-databases.sh` now refuses to touch `/data/postgres`
+  unless `10-render-env.sh` finished successfully (gated on a
+  `/run/postiz-config-validated` marker). Previously a misconfigured
+  add-on would still run `initdb` and create roles before failing.
+- Add `openssl` to the apt install list so the secret generator is
+  always available regardless of base-image package set.
+
 ## 0.2.0
 
 - Add the `webui` field to `config.yaml`, so the add-on's detail page in

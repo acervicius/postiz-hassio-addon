@@ -22,6 +22,7 @@ RUN set -eux; \
         nginx \
         redis-server \
         jq \
+        openssl \
         tini \
         procps \
         ; \

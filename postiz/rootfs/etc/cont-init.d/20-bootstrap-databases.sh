@@ -1,6 +1,11 @@
 #!/usr/bin/with-contenv bashio
 set -e
 
+if [ ! -f /run/postiz-config-validated ]; then
+    bashio::log.error "10-render-env.sh did not complete; skipping database bootstrap so /data stays untouched."
+    exit 1
+fi
+
 PG_MAJOR=17
 PGBIN="/usr/lib/postgresql/${PG_MAJOR}/bin"
 PGDATA="/data/postgres"
